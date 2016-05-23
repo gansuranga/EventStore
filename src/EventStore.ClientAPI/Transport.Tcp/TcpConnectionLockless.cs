@@ -121,7 +121,13 @@ namespace EventStore.ClientAPI.Transport.Tcp
                     memStream.Write(segment.Array, segment.Offset, segment.Count);
                     bytes += segment.Count;
                 }
-                _sendQueue.Enqueue(new ArraySegment<byte>(memStream.GetBuffer(), 0, (int)memStream.Length));
+
+                ArraySegment<byte> buffer;
+                if (memStream.TryGetBuffer(out buffer))
+                {
+                    _sendQueue.Enqueue(buffer);
+                }
+
                 NotifySendScheduled(bytes);
             }
 
@@ -146,7 +152,11 @@ namespace EventStore.ClientAPI.Transport.Tcp
                             break;
                     }
 
-                    _sendSocketArgs.SetBuffer(_memoryStream.GetBuffer(), 0, (int)_memoryStream.Length);
+                    ArraySegment<byte> buffer;
+                    if (_memoryStream.TryGetBuffer(out buffer))
+                    {
+                        _sendSocketArgs.SetBuffer(buffer.Array, 0, (int)_memoryStream.Length);
+                    }
 
                     try
                     {
@@ -317,7 +327,7 @@ namespace EventStore.ClientAPI.Transport.Tcp
             if (socket != null)
             {
                 Helper.EatException(() => socket.Shutdown(SocketShutdown.Both));
-                Helper.EatException(() => socket.Close(TcpConfiguration.SocketCloseTimeoutMs));
+                Helper.EatException(() => socket.Dispose());
             }
         }
 

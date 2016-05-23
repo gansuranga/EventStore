@@ -44,14 +44,14 @@ namespace EventStore.ClientAPI.Internal
 
         public Task<NodeEndPoints> DiscoverAsync(IPEndPoint failedTcpEndPoint )
         {
-            return Task.Factory.StartNew(() =>
+            return Task.Run(async () =>
             {
                 for (int attempt = 1; attempt <= _maxDiscoverAttempts; ++attempt)
                 {
                     //_log.Info("Discovering cluster. Attempt {0}/{1}...", attempt, _maxDiscoverAttempts);
                     try
                     {
-                        var endPoints = DiscoverEndPoint(failedTcpEndPoint);
+                        var endPoints = await DiscoverEndPoint(failedTcpEndPoint);
                         if (endPoints != null)
                         {
                             _log.Info("Discovering attempt {0}/{1} successful: best candidate is {2}.", attempt, _maxDiscoverAttempts, endPoints);
@@ -71,12 +71,12 @@ namespace EventStore.ClientAPI.Internal
             });
         }
 
-        private NodeEndPoints? DiscoverEndPoint(IPEndPoint failedEndPoint)
+        private async Task<NodeEndPoints?> DiscoverEndPoint(IPEndPoint failedEndPoint)
         {
             var oldGossip = Interlocked.Exchange(ref _oldGossip, null);
             var gossipCandidates = oldGossip != null
-                                           ? GetGossipCandidatesFromOldGossip(oldGossip, failedEndPoint)
-                                           : GetGossipCandidatesFromDns();
+                                           ? await GetGossipCandidatesFromOldGossip(oldGossip, failedEndPoint)
+                                           : await GetGossipCandidatesFromDns();
             for (int i=0; i<gossipCandidates.Length; ++i)
             {
                 var gossip = TryGetGossipFrom(gossipCandidates[i]);
@@ -94,7 +94,7 @@ namespace EventStore.ClientAPI.Internal
             return null;
         }
 
-        private GossipSeed[] GetGossipCandidatesFromDns()
+        private async Task<GossipSeed[]> GetGossipCandidatesFromDns()
         {
             //_log.Debug("ClusterDnsEndPointDiscoverer: GetGossipCandidatesFromDns");
             GossipSeed[] endpoints;
@@ -104,19 +104,20 @@ namespace EventStore.ClientAPI.Internal
             } 
             else
             {
-                endpoints = ResolveDns(_clusterDns).Select(x => new GossipSeed(new IPEndPoint(x, _managerExternalHttpPort))).ToArray();
+                var addresses = await ResolveDns(_clusterDns);
+                endpoints = addresses.Select(x => new GossipSeed(new IPEndPoint(x, _managerExternalHttpPort))).ToArray();
             }
             
             RandomShuffle(endpoints, 0, endpoints.Length-1);
             return endpoints;
         }
 
-        private IPAddress[] ResolveDns(string dns)
+        private async Task<IPAddress[]> ResolveDns(string dns)
         {
             IPAddress[] addresses;
             try
             {
-                addresses = Dns.GetHostAddresses(dns);
+                addresses = await Dns.GetHostAddressesAsync(dns);
             }
             catch (Exception exc)
             {
@@ -127,7 +128,7 @@ namespace EventStore.ClientAPI.Internal
             return addresses;
         }
 
-        private GossipSeed[] GetGossipCandidatesFromOldGossip(IEnumerable<ClusterMessages.MemberInfoDto> oldGossip, IPEndPoint failedTcpEndPoint)
+        private Task<GossipSeed[]> GetGossipCandidatesFromOldGossip(IEnumerable<ClusterMessages.MemberInfoDto> oldGossip, IPEndPoint failedTcpEndPoint)
         {
             //_log.Debug("ClusterDnsEndPointDiscoverer: GetGossipCandidatesFromOldGossip, failedTcpEndPoint: {0}.", failedTcpEndPoint);
             var gossipCandidates = failedTcpEndPoint == null 
@@ -138,7 +139,7 @@ namespace EventStore.ClientAPI.Internal
             return ArrangeGossipCandidates(gossipCandidates);
         }
 
-        private GossipSeed[] ArrangeGossipCandidates(ClusterMessages.MemberInfoDto[] members)
+        private Task<GossipSeed[]> ArrangeGossipCandidates(ClusterMessages.MemberInfoDto[] members)
         {
             var result = new GossipSeed[members.Length];
             int i = -1;
@@ -153,7 +154,7 @@ namespace EventStore.ClientAPI.Internal
             RandomShuffle(result, 0, i); // shuffle nodes
             RandomShuffle(result, j, members.Length - 1); // shuffle managers
 
-            return result;
+            return Task.FromResult(result);
         }
 
         private void RandomShuffle<T>(T[] arr, int i, int j)

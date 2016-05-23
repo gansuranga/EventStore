@@ -35,13 +35,5 @@ namespace EventStore.ClientAPI.Exceptions
                  Exception innerException) : base(message, innerException)
         {
         }
-
-        /// <summary>
-        /// Constructs a new <see cref="UserCommandFailedException"/>.
-        /// </summary>
-        protected UserCommandFailedException(SerializationInfo info,
-                    StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

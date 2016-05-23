@@ -31,12 +31,5 @@ namespace EventStore.ClientAPI.Exceptions
                 : base(string.Format("Unexpected error on server: {0}", message), innerException)
         {
         }
-
-        /// <summary>
-        /// Constructs a new instance of <see cref="ServerErrorException"/>.
-        /// </summary>
-        protected ServerErrorException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

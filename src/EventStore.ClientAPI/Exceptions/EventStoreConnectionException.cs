@@ -29,12 +29,5 @@ namespace EventStore.ClientAPI.Exceptions
         public EventStoreConnectionException(string message, Exception innerException): base(message, innerException)
         {
         }
-
-        /// <summary>
-        /// Constructs a new <see cref="EventStoreConnectionException"/>.
-        /// </summary>
-        protected EventStoreConnectionException(SerializationInfo info, StreamingContext context): base(info, context)
-        {
-        }
     }
 }

@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using EventStore.ClientAPI.Common.Utils;
 using EventStore.ClientAPI.Internal;
 using System;
+using System.Threading.Tasks;
 using EventStore.ClientAPI.SystemData;
 
 namespace EventStore.ClientAPI
@@ -19,7 +20,7 @@ namespace EventStore.ClientAPI
         /// <param name="connectionName">Optional name of connection (will be generated automatically, if not provided)</param>
         /// <param name="uri">The Uri to connect to. It can be tcp:// to point to a single node or discover:// to discover nodes</param>
         /// <returns>a new <see cref="IEventStoreConnection"/></returns>
-        public static IEventStoreConnection Create(Uri uri, string connectionName = null)
+        public static Task<IEventStoreConnection> Create(Uri uri, string connectionName = null)
         {
             return Create(ConnectionSettings.Default, uri, connectionName);
         }
@@ -30,7 +31,7 @@ namespace EventStore.ClientAPI
         /// <param name="connectionName">Optional name of connection (will be generated automatically, if not provided)</param>
         /// <param name="connectionString">The connection string to for this connection.</param>
         /// <returns>a new <see cref="IEventStoreConnection"/></returns>
-        public static IEventStoreConnection Create(string connectionString, string connectionName = null)
+        public static Task<IEventStoreConnection> Create(string connectionString, string connectionName = null)
         {
             var settings = ConnectionString.GetConnectionSettings(connectionString);
             var uri = GetUriFromConnectionString(connectionString);
@@ -51,7 +52,7 @@ namespace EventStore.ClientAPI
         /// <param name="connectionName">Optional name of connection (will be generated automatically, if not provided)</param>
         /// <param name="connectionSettings">The <see cref="ConnectionSettings"/> to apply to the new connection</param>
         /// <returns>a new <see cref="IEventStoreConnection"/></returns>
-        public static IEventStoreConnection Create(ConnectionSettings connectionSettings, string connectionName = null)
+        public static Task<IEventStoreConnection> Create(ConnectionSettings connectionSettings, string connectionName = null)
         {
             return Create(connectionSettings, (Uri)null, connectionName);
         }
@@ -63,7 +64,7 @@ namespace EventStore.ClientAPI
         /// <param name="connectionSettings">The <see cref="ConnectionSettings"/> to apply to the new connection</param>
         /// <param name="uri">The Uri to connect to. It can be tcp:// to point to a single node or discover:// to discover nodes via dns</param>
         /// <returns>a new <see cref="IEventStoreConnection"/></returns>
-        public static IEventStoreConnection Create(ConnectionSettings connectionSettings, Uri uri, string connectionName = null)
+        public static async Task<IEventStoreConnection> Create(ConnectionSettings connectionSettings, Uri uri, string connectionName = null)
         {
             var scheme = uri == null ? "" : uri.Scheme.ToLower();
 
@@ -96,7 +97,7 @@ namespace EventStore.ClientAPI
 
             if (scheme == "tcp")
             {
-                var tcpEndPoint = GetSingleNodeIPEndPointFrom(uri);
+                var tcpEndPoint = await GetSingleNodeIPEndPointFrom(uri);
                 return new EventStoreNodeConnection(connectionSettings, null, new StaticEndPointDiscoverer(tcpEndPoint, connectionSettings.UseSslConnection), connectionName);
             }
             if (connectionSettings.GossipSeeds != null && connectionSettings.GossipSeeds.Length > 0)
@@ -120,13 +121,13 @@ namespace EventStore.ClientAPI
             throw new Exception(string.Format("Unknown scheme for connection '{0}'", scheme));
         }
 
-        private static IPEndPoint GetSingleNodeIPEndPointFrom(Uri uri)
+        private static async Task<IPEndPoint> GetSingleNodeIPEndPointFrom(Uri uri)
         {
             //TODO GFY move this all the way back into the connection so it can be done on connect not on create
             var ipaddress = IPAddress.Any;
             if (!IPAddress.TryParse(uri.Host, out ipaddress))
             {
-                var entries = Dns.GetHostAddresses(uri.Host);
+                var entries = await Dns.GetHostAddressesAsync(uri.Host);
                 if (entries.Length == 0) throw new Exception(string.Format("Unable to parse IP address or lookup DNS host for '{0}'", uri.Host));
                 //pick an IPv4 address, if one exists
                 ipaddress = entries.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork);

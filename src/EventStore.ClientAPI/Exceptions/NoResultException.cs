@@ -29,12 +29,5 @@ namespace EventStore.ClientAPI.Exceptions
         public NoResultException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        /// <summary>
-        /// Constructs a new <see cref="NoResultException"/>.
-        /// </summary>
-        protected NoResultException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

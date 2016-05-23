@@ -31,14 +31,5 @@ namespace EventStore.ClientAPI.Exceptions
             : base(message, innerException)
         {
         }
-
-        /// <summary>
-        /// Constructs a new <see cref="ProjectionCommandFailedException"/>.
-        /// </summary>
-        protected ProjectionCommandConflictException(SerializationInfo info,
-                                                     StreamingContext context)
-            : base(info, context)
-        {
-        }
     }
 }

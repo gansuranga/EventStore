@@ -29,12 +29,5 @@ namespace EventStore.ClientAPI.Exceptions
         public AccessDeniedException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        /// <summary>
-        /// Constructs a new <see cref="AccessDeniedException" />.
-        /// </summary>
-        protected AccessDeniedException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

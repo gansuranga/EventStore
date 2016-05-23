@@ -29,12 +29,5 @@ namespace EventStore.ClientAPI.Exceptions
         public InvalidTransactionException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        /// <summary>
-        /// Constructs a new <see cref="InvalidTransactionException"/>.
-        /// </summary>
-        protected InvalidTransactionException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using EventStore.ClientAPI.Common.Utils;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace EventStore.ClientAPI.Internal
 {
@@ -24,10 +25,10 @@ namespace EventStore.ClientAPI.Internal
 
             _messageQueue.Enqueue(message);
             if (Interlocked.CompareExchange(ref _isProcessing, 1, 0) == 0)
-                ThreadPool.QueueUserWorkItem(ProcessQueue);
+                Task.Run(() => ProcessQueue());
         }
 
-        private void ProcessQueue(object state)
+        private void ProcessQueue()
         {
             do
             {

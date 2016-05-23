@@ -22,12 +22,5 @@ namespace EventStore.ClientAPI.Exceptions
         public WrongExpectedVersionException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        /// <summary>
-        /// Constructs a new instance of <see cref="WrongExpectedVersionException" />.
-        /// </summary>
-        protected WrongExpectedVersionException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

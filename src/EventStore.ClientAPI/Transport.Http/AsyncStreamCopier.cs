@@ -32,11 +32,12 @@ namespace EventStore.ClientAPI.Transport.Http
             GetNextChunk();
         }
 
-        private void GetNextChunk()
+        private async void GetNextChunk()
         {
             try
             {
-                _input.BeginRead(_buffer, 0, _buffer.Length, InputReadCompleted, null);
+                var bytesRead = await _input.ReadAsync(_buffer, 0, _buffer.Length);
+                InputReadCompleted(bytesRead);
             }
             catch (Exception e)
             {
@@ -45,18 +46,18 @@ namespace EventStore.ClientAPI.Transport.Http
             }
         }
 
-        private void InputReadCompleted(IAsyncResult ar)
+        private async void InputReadCompleted(int bytesRead)
         {
             try
             {
-                int bytesRead = _input.EndRead(ar);
                 if (bytesRead <= 0) //mono can return -1
                 {
                     OnCompleted();
                     return;
                 }
 
-                _output.BeginWrite(_buffer, 0, bytesRead, OutputWriteCompleted, null);
+                await _output.WriteAsync(_buffer, 0, bytesRead);
+                OutputWriteCompleted();
             }
             catch (Exception e)
             {
@@ -65,11 +66,10 @@ namespace EventStore.ClientAPI.Transport.Http
             }
         }
 
-        private void OutputWriteCompleted(IAsyncResult ar)
+        private void OutputWriteCompleted()
         {
             try
             {
-                _output.EndWrite(ar);
                 GetNextChunk();
             }
             catch (Exception e)
@@ -81,8 +81,7 @@ namespace EventStore.ClientAPI.Transport.Http
 
         private void OnCompleted()
         {
-            if (Completed != null)
-                Completed(this, EventArgs.Empty);
+            Completed?.Invoke(this, EventArgs.Empty);
         }
     }
 }

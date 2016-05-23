@@ -4,6 +4,7 @@ using EventStore.ClientAPI.Common.Utils;
 using EventStore.ClientAPI.Exceptions;
 using EventStore.ClientAPI.SystemData;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace EventStore.ClientAPI
 {
@@ -166,7 +167,7 @@ namespace EventStore.ClientAPI
 
         private void RunSubscription()
         {
-            ThreadPool.QueueUserWorkItem(_ =>
+            Task.Run(() =>
             {
                 if (Verbose) Log.Debug("Catch-up Subscription to {0}: running...", IsSubscribedToAll ? "<all>" : StreamId);
 
@@ -204,8 +205,7 @@ namespace EventStore.ClientAPI
 
                 if (Verbose) Log.Debug("Catch-up Subscription to {0}: processing live events...", IsSubscribedToAll ? "<all>" : StreamId);
 
-                if (_liveProcessingStarted != null)
-                    _liveProcessingStarted(this);
+                _liveProcessingStarted?.Invoke(this);
 
                 if (Verbose) Log.Debug("Catch-up Subscription to {0}: hooking to connection.Connected", IsSubscribedToAll ? "<all>" : StreamId);
                 _connection.Connected += OnReconnect;
@@ -255,7 +255,7 @@ namespace EventStore.ClientAPI
         private void EnsureProcessingPushQueue()
         {
             if (Interlocked.CompareExchange(ref _isProcessing, 1, 0) == 0)
-                ThreadPool.QueueUserWorkItem(_ => ProcessLiveQueue());
+                Task.Run(() => ProcessLiveQueue());
         }
 
         private void ProcessLiveQueue()

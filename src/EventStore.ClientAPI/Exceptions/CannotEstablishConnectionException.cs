@@ -30,13 +30,5 @@ namespace EventStore.ClientAPI.Exceptions
                  Exception innerException) : base(message, innerException)
         {
         }
-
-        /// <summary>
-        /// Constructs a new <see cref="CannotEstablishConnectionException" />.
-        /// </summary>
-        protected CannotEstablishConnectionException(SerializationInfo info,
-                    StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

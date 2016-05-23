@@ -17,8 +17,10 @@ namespace EventStore.ClientAPI.Transport.Http
 
         static HttpAsyncClient()
         {
-            ServicePointManager.MaxServicePointIdleTime = 10000;
-            ServicePointManager.DefaultConnectionLimit = 800;
+            // TODO
+            // Use WinHttpHandler? What a
+            //ServicePointManager.MaxServicePointIdleTime = 10000;
+            //ServicePointManager.DefaultConnectionLimit = 800;
         }
 
         public HttpAsyncClient(TimeSpan timeout) 

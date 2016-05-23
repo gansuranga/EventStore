@@ -7,6 +7,7 @@ using System.Threading;
 using EventStore.ClientAPI.Common;
 using EventStore.ClientAPI.Common.Utils;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace EventStore.ClientAPI.Transport.Tcp
 {
@@ -34,12 +35,12 @@ namespace EventStore.ClientAPI.Transport.Tcp
                                   {
                                       connection.InitSocket(socket);
                                       if (onConnectionEstablished != null)
-                                          ThreadPool.QueueUserWorkItem(o => onConnectionEstablished(connection));
+                                          Task.Run(() => onConnectionEstablished(connection));
                                   },
                                   (_, socketError) =>
                                   {
                                       if (onConnectionFailed != null)
-                                          ThreadPool.QueueUserWorkItem(o => onConnectionFailed(connection, socketError));
+                                          Task.Run(() => onConnectionFailed(connection, socketError));
                                   }, connection, connectionTimeout);
 // ReSharper restore ImplicitlyCapturedClosure
             return connection;
@@ -143,8 +144,11 @@ namespace EventStore.ClientAPI.Transport.Tcp
                 if (_memoryStream.Length >= MaxSendPacketSize)
                     break;
             }
-
-            _sendSocketArgs.SetBuffer(_memoryStream.GetBuffer(), 0, (int) _memoryStream.Length);
+            ArraySegment<byte> buffer;
+            if (_memoryStream.TryGetBuffer(out buffer))
+            {
+                _sendSocketArgs.SetBuffer(buffer.Array, 0, (int)_memoryStream.Length);
+            }
 
             try
             {
@@ -312,7 +316,7 @@ namespace EventStore.ClientAPI.Transport.Tcp
             if (_socket != null)
             {
                 Helper.EatException(() => _socket.Shutdown(SocketShutdown.Both));
-                Helper.EatException(() => _socket.Close(TcpConfiguration.SocketCloseTimeoutMs));
+                Helper.EatException(() => _socket.Dispose());
                 _socket = null;
             }
 

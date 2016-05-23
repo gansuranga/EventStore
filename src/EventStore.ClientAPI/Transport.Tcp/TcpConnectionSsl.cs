@@ -11,6 +11,7 @@ using System.Threading;
 using EventStore.ClientAPI.Common;
 using EventStore.ClientAPI.Common.Utils;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace EventStore.ClientAPI.Transport.Tcp
 {
@@ -34,12 +35,12 @@ namespace EventStore.ClientAPI.Transport.Tcp
                                   {
                                       connection.InitClientSocket(socket, targetHost, validateServer);
                                       if (onConnectionEstablished != null)
-                                          ThreadPool.QueueUserWorkItem(o => onConnectionEstablished(connection));
+                                          Task.Run(() => onConnectionEstablished(connection));
                                   },
                                   (_, socketError) =>
                                   {
                                       if (onConnectionFailed != null)
-                                          ThreadPool.QueueUserWorkItem(o => onConnectionFailed(connection, socketError));
+                                          Task.Run(() => onConnectionFailed(connection, socketError));
                                   }, connection, connectionTimeout);
             // ReSharper restore ImplicitlyCapturedClosure
             return connection;
@@ -80,7 +81,7 @@ namespace EventStore.ClientAPI.Transport.Tcp
             _onConnectionClosed = onConnectionClosed;
         }
 
-        private void InitClientSocket(Socket socket, string targetHost, bool validateServer)
+        private async void InitClientSocket(Socket socket, string targetHost, bool validateServer)
         {
             Ensure.NotNull(targetHost, "targetHost");
 
@@ -104,7 +105,8 @@ namespace EventStore.ClientAPI.Transport.Tcp
                 _sslStream = new SslStream(new NetworkStream(socket, true), false, ValidateServerCertificate, null);
                 try
                 {
-                    _sslStream.BeginAuthenticateAsClient(targetHost, OnEndAuthenticateAsClient, _sslStream);
+                    Task.Run(() =>_sslStream.AuthenticateAsClientAsync(targetHost)).ContinueWith(OnEndAuthenticateAsClient);
+
                 }
                 catch (AuthenticationException exc)
                 {
@@ -130,7 +132,6 @@ namespace EventStore.ClientAPI.Transport.Tcp
                 lock (_streamLock)
                 {
                     var sslStream = (SslStream) ar.AsyncState;
-                    sslStream.EndAuthenticateAsClient(ar);
                     DisplaySslStreamInfo(sslStream);
                     _isAuthenticated = true;
                 }
@@ -183,16 +184,16 @@ namespace EventStore.ClientAPI.Transport.Tcp
 
             X509Certificate localCert = stream.LocalCertificate;
             if (localCert != null)
-                sb.AppendFormat("Local certificate was issued to {0} and is valid from {1} until {2}.\n",
-                                localCert.Subject, localCert.GetEffectiveDateString(), localCert.GetExpirationDateString());
+                sb.AppendFormat("Local certificate was issued to {0} : {1}.\n",
+                                localCert.Subject, localCert.ToString());
             else
                 sb.AppendFormat("Local certificate is null.\n");
 
             // Display the properties of the client's certificate.
             X509Certificate remoteCert = stream.RemoteCertificate;
             if (remoteCert != null)
-                sb.AppendFormat("Remote certificate was issued to {0} and is valid from {1} until {2}.\n",
-                                remoteCert.Subject, remoteCert.GetEffectiveDateString(), remoteCert.GetExpirationDateString());
+                sb.AppendFormat("Remote certificate was issued to {0} : {1}",
+                                remoteCert.Subject, remoteCert.ToString());
             else
                 sb.AppendFormat("Remote certificate is null.\n");
 
@@ -214,7 +215,7 @@ namespace EventStore.ClientAPI.Transport.Tcp
             TrySend();
         }
 
-        private void TrySend()
+        private async void TrySend()
         {
             lock (_streamLock)
             {
@@ -237,7 +238,13 @@ namespace EventStore.ClientAPI.Transport.Tcp
             try
             {
                 NotifySendStarting(_sendingBytes);
-                _sslStream.BeginWrite(_memoryStream.GetBuffer(), 0, _sendingBytes, OnEndWrite, null);
+                ArraySegment<byte> buffer;
+
+                if (_memoryStream.TryGetBuffer(out buffer))
+                {
+                    await _sslStream.WriteAsync(buffer.Array, 0, _sendingBytes);
+                    OnEndWrite();
+                }
             }
             catch (SocketException exc)
             {
@@ -255,11 +262,10 @@ namespace EventStore.ClientAPI.Transport.Tcp
             }
         }
 
-        private void OnEndWrite(IAsyncResult ar)
+        private void OnEndWrite()
         {
             try
             {
-                _sslStream.EndWrite(ar);
                 NotifySendCompleted(_sendingBytes);
 
                 lock (_streamLock)
@@ -299,12 +305,13 @@ namespace EventStore.ClientAPI.Transport.Tcp
             TryDequeueReceivedData();
         }
 
-        private void StartReceive()
+        private async void StartReceive()
         {
             try
             {
                 NotifyReceiveStarting();
-                _sslStream.BeginRead(_receiveBuffer, 0, _receiveBuffer.Length, OnEndRead, null);
+                var readLength = await _sslStream.ReadAsync(_receiveBuffer, 0, _receiveBuffer.Length);
+                OnEndRead(readLength);
             }
             catch (SocketException exc)
             {
@@ -322,33 +329,10 @@ namespace EventStore.ClientAPI.Transport.Tcp
             }
         }
 
-        private void OnEndRead(IAsyncResult ar)
+        private void OnEndRead(int readLength)
         {
-            int bytesRead;
-            try
-            {
-                bytesRead = _sslStream.EndRead(ar);
-            }
-            catch (SocketException exc)
-            {
-                _log.Debug(exc, "SocketException '{0}' during EndRead.", exc.SocketErrorCode);
-                NotifyReceiveCompleted(0);
-                CloseInternal(exc.SocketErrorCode, "SocketException during EndRead.");
-                return;
-            }
-            catch (ObjectDisposedException)
-            {
-                NotifyReceiveCompleted(0);
-                CloseInternal(SocketError.SocketError, "SslStream disposed.");
-                return;
-            }
-            catch (Exception exc)
-            {
-                _log.Debug(exc, "Exception during EndRead.");
-                NotifyReceiveCompleted(0);
-                CloseInternal(SocketError.SocketError, "Exception during EndRead.");
-                return;
-            }
+            var bytesRead = readLength;
+
             if (bytesRead <= 0) // socket closed normally
             {
                 NotifyReceiveCompleted(0);
@@ -424,10 +408,9 @@ namespace EventStore.ClientAPI.Transport.Tcp
                       socketError, reason, GetType().Name);
 
             if (_sslStream != null)
-                Helper.EatException(() => _sslStream.Close());
+                Helper.EatException(() => _sslStream.Dispose());
 
-            if (_onConnectionClosed != null)
-                _onConnectionClosed(this, socketError);
+            _onConnectionClosed?.Invoke(this, socketError);
         }
 
         public override string ToString()

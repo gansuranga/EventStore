@@ -166,7 +166,7 @@ namespace EventStore.ClientAPI
         {
             _queue.Enqueue(resolvedEvent);
             if (Interlocked.CompareExchange(ref _isProcessing, 1, 0) == 0)
-                ThreadPool.QueueUserWorkItem(_ => ProcessQueue());
+                Task.Run(() => ProcessQueue());
         }
 
 

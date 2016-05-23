@@ -256,10 +256,10 @@ namespace EventStore.ClientAPI.ClientOperations
             _actionQueue.Enqueue(action);
             if (_actionQueue.Count > _maxQueueSize) DropSubscription(SubscriptionDropReason.UserInitiated, new Exception("client buffer too big"));
             if (Interlocked.CompareExchange(ref _actionExecuting, 1, 0) == 0)
-                ThreadPool.QueueUserWorkItem(ExecuteActions);
+                Task.Run(() => ExecuteActions());
         }
 
-        private void ExecuteActions(object state)
+        private void ExecuteActions()
         {
             do
             {
