@@ -43,6 +43,7 @@ bin
 *.cache
 *.ncrunchsolution
 *.ncrunchproject
+project.lock.json
 src/.vs/
 
 .idea
