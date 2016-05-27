@@ -97,3 +97,5 @@ test_results
 # Mac
 .DS_Store
 
+# .net core
+project.lock.json
