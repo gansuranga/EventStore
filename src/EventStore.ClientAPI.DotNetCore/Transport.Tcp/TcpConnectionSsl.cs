@@ -8,7 +8,6 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
-using EventStore.ClientAPI.Common;
 using EventStore.ClientAPI.Common.Utils;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
@@ -81,7 +80,7 @@ namespace EventStore.ClientAPI.Transport.Tcp
             _onConnectionClosed = onConnectionClosed;
         }
 
-        private async void InitClientSocket(Socket socket, string targetHost, bool validateServer)
+        private void InitClientSocket(Socket socket, string targetHost, bool validateServer)
         {
             Ensure.NotNull(targetHost, "targetHost");
 
@@ -105,7 +104,7 @@ namespace EventStore.ClientAPI.Transport.Tcp
                 _sslStream = new SslStream(new NetworkStream(socket, true), false, ValidateServerCertificate, null);
                 try
                 {
-                    Task.Run(() =>_sslStream.AuthenticateAsClientAsync(targetHost)).ContinueWith(OnEndAuthenticateAsClient);
+                    Task.Run(() => _sslStream.AuthenticateAsClientAsync(targetHost)).ContinueWith(OnEndAuthenticateAsClient);
 
                 }
                 catch (AuthenticationException exc)
