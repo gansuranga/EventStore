@@ -9,7 +9,6 @@
     <PackageTags>EventStore;dotnetcore</PackageTags>
     <PackageProjectUrl>https://github.com/qooroo/EventStore</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/qooroo/EventStore/blob/dotnet-core/LICENSE.md</PackageLicenseUrl>
-    <PackageTargetFallback>$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
