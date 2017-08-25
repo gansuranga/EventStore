@@ -168,7 +168,7 @@ Function Import-VisualStudioVars
     Param
     (
         [Parameter(Mandatory = $true, Position = 0)]
-        [ValidateSet('2010', '2012', '2013', '2015', 'Windows7.1SDK')]
+        [ValidateSet('2010', '2012', '2013', '2015', '2017', 'Windows7.1SDK')]
         [string]$VisualStudioVersion,
         [Parameter(Position = 1)]
         [string]$Architecture = 'amd64',
@@ -198,6 +198,11 @@ Function Import-VisualStudioVars
             '2015' {
                 Push-Environment
                 Invoke-BatchFile (Join-Path $env:VS140COMNTOOLS "VsMSBuildCmd.bat") -Parameters $Architecture -RedirectStdErrToNull $false
+            }
+			
+			'2017' {
+                Push-Environment
+                Invoke-BatchFile (Join-Path $env:VS150COMNTOOLS "VsMSBuildCmd.bat") -Parameters $Architecture -RedirectStdErrToNull $false
             }
 
             'Windows7.1SDK' {
@@ -238,6 +243,12 @@ Function Get-GuessedVisualStudioVersion {
 
     #Visual Studio's, newest versions first
 
+	#Visual Studio 2017
+	#In case VS150COMNTOOLS is missing in environment variables, it must be added manually
+    if ((Test-Path env:\VS150COMNTOOLS) -and (Test-Path (Join-Path $env:VS150COMNTOOLS "VsMSBuildCmd.bat"))) {
+        return '2017'
+    }
+	
     #Visual Studio 2015
     if ((Test-Path env:\VS140COMNTOOLS) -and (Test-Path (Join-Path $env:VS140COMNTOOLS "VsMSBuildCmd.bat"))) {
         return '2015'
@@ -258,7 +269,7 @@ Function Get-GuessedVisualStudioVersion {
         return '2010'
     }
 
-    throw "Can't find any of VS2010-2015 or WindowsSDK7.1."
+    throw "Can't find any of VS2010-2017 or WindowsSDK7.1."
 }
 
 Function Get-PlatformToolsetForVisualStudioVersion {
@@ -267,7 +278,9 @@ Function Get-PlatformToolsetForVisualStudioVersion {
         [string]$VisualStudioVersion
     )
     Process {
-        if  ($VisualStudioVersion -eq "2015") {
+		if  ($VisualStudioVersion -eq "2017") {
+            return "v150"
+        } elseif  ($VisualStudioVersion -eq "2015") {
             return "v140"
         } elseif($VisualStudioVersion -eq "2013") {
             return "v120"

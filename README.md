@@ -95,7 +95,7 @@ Optional parameters (Specified using `-ParameterName value`)
 - `-Platform` — `x64` (default) or `x86`
 - `-Configuration` — `release` (default) or `debug`
 - `-Version` — the semantic version number to give to the release. Defaults to version `0.0.0.0`, which should be used for all non-released builds.
-- `-SpecificVisualStudioVersion` — `2010`, `2012`, `2013`, `Windows7.1SDK`. Default is to use whichever version is installed. This only needs to be overridden if you have multiple versions installed.
+- `-SpecificVisualStudioVersion` — `2010`, `2012`, `2013`, `2015`, `2017`, `Windows7.1SDK`. Default is to use whichever version is installed. This only needs to be overridden if you have multiple versions installed.
 - `-ForceNetwork` — true if you want to force the script to get dependencies even if Windows thinks theres no network connection (otherwise we don’t try to avoid sometimes lengthy delays).
 - `-Defines` — any additional defines you want to pass to the compiler. Should be enclosed in single quotes
 
